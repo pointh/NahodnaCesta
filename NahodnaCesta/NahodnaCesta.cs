@@ -177,7 +177,7 @@ namespace NahodnaCesta
             }
 
             Smer smer = OptimalniSmer();
-            if (smer != Smer.Nikam)
+            if (smer != Smer.Nikam) // v této cestě nejde pokračovat
             {
                 hriste[Y, X] = znacka++;
                 DalsiKrok(smer);
@@ -190,6 +190,7 @@ namespace NahodnaCesta
             return false;
         }
 
+        // Ústup na předchozí značku
         private Smer OptimalniUstup(int znacka)
         {
             int[] okoli = OkoliPole(X, Y);
@@ -200,7 +201,7 @@ namespace NahodnaCesta
     class Hriste
     {
         public static int[,] t = {
-            { 0,  0,  0,  0,  0, 0, 0,  0, 0,  0,  0,  0 },
+            { 0,  0,  0,  0,  0, 0, 0,  0, 0,  0,  0,  0 }, // -1 = bariéra
             { 0,  0,  0,  0, -1, 0, 0,  0, 0,  0,  0,  0 },
             { 0,  0,  0,  0, -1, 0, 0,  0, 0,  0,  0,  0 },
             { 0,  0,  0,  0, -1, 0, 0,  0, 0,  0,  0,  0 },
