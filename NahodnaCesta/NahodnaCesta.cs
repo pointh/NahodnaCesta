@@ -4,77 +4,70 @@ using System.Linq;
 namespace NahodnaCesta
 {
     public enum Smer { Vpravo, Dolu, Vlevo, Nahoru, Nikam };
+    public enum StavPole { BlokovanePole = -1, ZavrenePole = -2, Hranice = int.MaxValue};
 
     class Figura
     {
-        const int Hranice = int.MaxValue;
-        const int BlokovanePole = -1;
-        const int ZavrenePole = -2;
         int pocetKroku = 0;
         public bool debug = true; // zobrazovat/nezobrazovat mezivýsledky
-
         private int X, Y; // aktuální pozice
         private readonly int cilX, cilY; // pozice cíle
         private readonly int startX, startY; // pozice začátku
-
-        private int _sirka, _vyska; // šířka a výška hřiště
-        private int[,] hriste;
+        private readonly int _sirka, _vyska; // šířka a výška hřiště
+        private readonly int[,] hriste;
         private int znacka = 1; // hodnota navštíveného pole
-        Random rnd;
+        
 
-        public Figura(int startRadek, int startSloupec, int endRadek, int endSloupec, int[,] arr)
+        public Figura(int startRadek, int startSloupec, int endRadek, int endSloupec, int[,] hriste)
         {
             startX = startSloupec; startY = startRadek;
             cilX = endSloupec; cilY = endRadek;
 
             X = startSloupec; Y = startRadek;
-            this._sirka = arr.GetLength(1);
-            this._vyska = arr.GetLength(0);
-            hriste = arr;
-            //hriste[cilY, cilX] = -9;
-            rnd = new Random();
+            this._sirka = hriste.GetLength(1);
+            this._vyska = hriste.GetLength(0);
+            this.hriste = hriste;
         }
 
         int[] OkoliPole(int x, int y)
         {
-            int[] hodnotyVeSmeru = new int[4];
+            int[] okoli = new int[4];
 
             if (x + 1 < _sirka && hriste[y, x + 1] >= 0)
-                hodnotyVeSmeru[(int)Smer.Vpravo] = hriste[y, x + 1]; // hodnota pole vpravo
+                okoli[(int)Smer.Vpravo] = hriste[y, x + 1]; // hodnota pole vpravo
             else
-                hodnotyVeSmeru[(int)Smer.Vpravo] = Hranice; // vpravo
+                okoli[(int)Smer.Vpravo] = (int)StavPole.Hranice; // vpravo
 
             if (y + 1 < _vyska && hriste[y + 1, x] >= 0)
-                hodnotyVeSmeru[(int)Smer.Dolu] = hriste[y + 1, x];
+                okoli[(int)Smer.Dolu] = hriste[y + 1, x];
             else
-                hodnotyVeSmeru[(int)Smer.Dolu] = Hranice; // dolu
+                okoli[(int)Smer.Dolu] = (int)StavPole.Hranice; // dolu
 
             if (x > 0 && hriste[y, x - 1] >= 0)
-                hodnotyVeSmeru[(int)Smer.Vlevo] = hriste[y, x - 1];
+                okoli[(int)Smer.Vlevo] = hriste[y, x - 1];
             else
-                hodnotyVeSmeru[(int)Smer.Vlevo] = Hranice; // vlevo
+                okoli[(int)Smer.Vlevo] = (int)StavPole.Hranice; // vlevo
 
             if (y > 0 && hriste[y - 1, x] >= 0)
-                hodnotyVeSmeru[(int)Smer.Nahoru] = hriste[y - 1, x];
+                okoli[(int)Smer.Nahoru] = hriste[y - 1, x];
             else
-                hodnotyVeSmeru[(int)Smer.Nahoru] = Hranice; // nahoru
+                okoli[(int)Smer.Nahoru] = (int)StavPole.Hranice; // nahoru
 
-            return hodnotyVeSmeru;
+            return okoli;
         }
 
         private Smer Strategy(int[] okoli)
         {
-            if (Array.IndexOf(okoli, 0) == -1)
+            if (Array.IndexOf(okoli, 0) == -1) // v okolí není volné pole, které by už nebylo procházeno
             {
                 return Smer.Nikam;
             }
 
-            return (Smer)Array.IndexOf(okoli, okoli.Min());
+            // tady je co zlepšovat
             // jdi směrem na MINIMÁLNÍ sousední hodnotu
-
-            // return (Smer)rnd.Next(0, 4);
-
+            return (Smer)Array.IndexOf(okoli, okoli.Min());
         }
+
         private Smer OptimalniSmer()
         {
             int[] okoliAktualniPozice = OkoliPole(X, Y);
@@ -106,40 +99,19 @@ namespace NahodnaCesta
                 Y += 1;
         }
 
-        public void WriteHriste(int[,] hriste)
+        // Ústup na předchozí značku
+        private Smer OptimalniUstup(int znacka)
         {
-            for (int i = 0; i < hriste.GetLength(0); i++)
-            {
-                for (int j = 0; j < hriste.GetLength(1); j++)
-                {
-                    if (i == cilY && j == cilX)
-                    {
-                        ConsoleColor c = Console.ForegroundColor;
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.Write("{0,4}", hriste[i, j]);
-                        Console.ForegroundColor = c;
-                        continue;
-                    }
-                    if (i == startY && j == startX)
-                    {
-                        ConsoleColor c = Console.ForegroundColor;
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.Write("{0,4}", hriste[i, j]);
-                        Console.ForegroundColor = c;
-                        continue;
-                    }
-                    if (hriste[i, j] == ZavrenePole)
-                    {
-                        ConsoleColor c = Console.ForegroundColor;
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.Write("{0,4}", hriste[i, j]);
-                        Console.ForegroundColor = c;
-                        continue;
-                    }
-                    Console.Write("{0,4}", hriste[i, j]);
-                }
-                Console.WriteLine();
-            }
+            int[] okoli = OkoliPole(X, Y);
+            Smer ustup = (Smer)Array.IndexOf(okoli, znacka);
+            return ustup;
+        }
+
+        public void UkonciHledani()
+        {
+            Hriste.VypisHriste(cilX, cilY, startX, startY);
+            Console.WriteLine("\nKonec po {0} krocích", pocetKroku);
+            Console.ReadLine();
         }
 
         public bool DalsiKrok(Smer s)
@@ -147,9 +119,7 @@ namespace NahodnaCesta
             pocetKroku++;
             if (X == cilX && Y == cilY)
             {
-                WriteHriste(hriste);
-                Console.WriteLine("\nKonec po {0} krocích", pocetKroku);
-                Console.ReadLine();
+                UkonciHledani();
                 return true;
             }
 
@@ -171,7 +141,7 @@ namespace NahodnaCesta
 
             if (debug)
             {
-                WriteHriste(hriste);
+                Hriste.VypisHriste(cilX, cilY,startX, startY);
                 Console.WriteLine();
                 //Console.ReadLine();
             }
@@ -184,23 +154,17 @@ namespace NahodnaCesta
             }
             else
             {
-                hriste[Y, X] = ZavrenePole;
+                hriste[Y, X] = (int) StavPole.ZavrenePole;
                 DalsiKrok(OptimalniUstup(--znacka));
             }
             return false;
         }
 
-        // Ústup na předchozí značku
-        private Smer OptimalniUstup(int znacka)
-        {
-            int[] okoli = OkoliPole(X, Y);
-            Smer ustup = (Smer)Array.IndexOf(okoli, znacka);
-            return ustup;
-        }
+       
     }
     class Hriste
     {
-        public static int[,] t = {
+        public static int[,] hriste = {
             { 0,  0,  0,  0,  0, 0, 0,  0, 0,  0,  0,  0 }, // -1 = bariéra
             { 0,  0,  0,  0, -1, 0, 0,  0, 0,  0,  0,  0 },
             { 0,  0,  0,  0, -1, 0, 0,  0, 0,  0,  0,  0 },
@@ -217,29 +181,64 @@ namespace NahodnaCesta
 
         private static void CistiHriste()
         {
-            for (int i = 0; i < t.GetLength(0); i++)
+            for (int i = 0; i < hriste.GetLength(0); i++)
             {
-                for (int j = 0; j < t.GetLength(1); j++)
+                for (int j = 0; j < hriste.GetLength(1); j++)
                 {
-                    if (t[i, j] > 0) // kroky jsou vždy kladné, záporná jsou omezení (hranice a ústupy)
-                        t[i, j] = 0;
+                    if (hriste[i, j] > 0) // kroky jsou vždy kladné, záporná jsou omezení (hranice a ústupy)
+                        hriste[i, j] = 0;
                 }
             }
         }
 
-        public static void Main(string[] args)
+        public static void VypisHriste(int cilX, int cilY, int startX, int startY)
         {
-            Figura f = new Figura(2, 11, 6, 2, t);
+            for (int i = 0; i < hriste.GetLength(0); i++)
+            {
+                for (int j = 0; j < hriste.GetLength(1); j++)
+                {
+                    if (i == cilY && j == cilX)
+                    {
+                        ConsoleColor c = Console.ForegroundColor;
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.Write("{0,4}", hriste[i, j]);
+                        Console.ForegroundColor = c;
+                        continue;
+                    }
+                    if (i == startY && j == startX)
+                    {
+                        ConsoleColor c = Console.ForegroundColor;
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.Write("{0,4}", hriste[i, j]);
+                        Console.ForegroundColor = c;
+                        continue;
+                    }
+                    if (hriste[i, j] == (int)StavPole.ZavrenePole)
+                    {
+                        ConsoleColor c = Console.ForegroundColor;
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.Write("{0,4}", hriste[i, j]);
+                        Console.ForegroundColor = c;
+                        continue;
+                    }
+                    Console.Write("{0,4}", hriste[i, j]);
+                }
+                Console.WriteLine();
+            }
+        }
+        public static void Main()
+        {
+            Figura f = new Figura(2, 11, 6, 2, hriste);
             f.DalsiKrok(Smer.Vlevo);
 
             CistiHriste();
 
-            f = new Figura(2, 11, 6, 2, t);
+            f = new Figura(2, 11, 6, 2, hriste);
             f.DalsiKrok(Smer.Vlevo);
 
             CistiHriste();
 
-            f = new Figura(2, 11, 6, 2, t); // napodruhé se už nezlepšuje - heuristika!
+            f = new Figura(2, 11, 6, 2, hriste); // napodruhé se už nezlepšuje - heuristika!
             f.DalsiKrok(Smer.Vpravo);
         }
 
