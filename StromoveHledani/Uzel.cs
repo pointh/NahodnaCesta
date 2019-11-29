@@ -11,7 +11,7 @@ namespace StromoveHledani
         public int x, y;
         public Uzel(int x, int y, int[,] hriste)
         {
-            if (hriste[x, y] == (int)StavPole.BlokovanePole)
+            if (hriste[x, y] == (int)StavPole.Blokovane)
             {
                 return;
             }

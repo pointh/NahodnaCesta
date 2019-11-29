@@ -7,8 +7,8 @@ using System.Threading;
 
 namespace StromoveHledani
 {
-    public enum Smer { Vpravo, Nahoru, Vlevo, Dolu, Nikam };
-    public enum StavPole { BlokovanePole = -1, Navstivene = -2, Hranice = int.MaxValue, Volne = 0 };
+    public enum Smer { Vpravo, Nahoru, Vlevo, Dolu };
+    public enum StavPole { Blokovane = -1, Navstivene = -2, Volne = 0 };
     class Hriste
     {
         public static int[,] hriste = {
@@ -65,6 +65,7 @@ namespace StromoveHledani
             Console.WriteLine();
         }
 
+        // obsahuje List list Uzel u?
         public static bool ObsahujeIdentickyUzel(List<Uzel> list, Uzel u)
         {
             foreach (Uzel p in list)
@@ -80,25 +81,26 @@ namespace StromoveHledani
             foreach ( var s in Enum.GetValues(typeof(Smer)))
                 switch (s) {
                     case Smer.Vpravo:
-                        if (u.x < hriste.GetLength(1) - 1 && hriste[u.x + 1, u.y] != (int)StavPole.BlokovanePole)
+                        if (u.x < hriste.GetLength(1) - 1 && hriste[u.x + 1, u.y] != (int)StavPole.Blokovane)
                             l.Add(new Uzel(u.x + 1, u.y, hriste));
                         break;
                     case Smer.Nahoru:
-                        if (u.y > 0 && hriste[u.x, u.y - 1] != (int)StavPole.BlokovanePole)
+                        if (u.y > 0 && hriste[u.x, u.y - 1] != (int)StavPole.Blokovane)
                             l.Add(new Uzel(u.x, u.y-1, hriste));
                         break;
                     case Smer.Vlevo:
-                        if (u.x - 1 > -1 && hriste[u.x - 1, u.y] != (int)StavPole.BlokovanePole)
+                        if (u.x - 1 > -1 && hriste[u.x - 1, u.y] != (int)StavPole.Blokovane)
                             l.Add(new Uzel(u.x - 1, u.y, hriste));
                         break;
                     case Smer.Dolu:
-                        if (u.y < hriste.GetLength(0) - 1 && hriste[u.x, u.y + 1] != (int)StavPole.BlokovanePole)
+                        if (u.y < hriste.GetLength(0) - 1 && hriste[u.x, u.y + 1] != (int)StavPole.Blokovane)
                             l.Add(new Uzel(u.x, u.y + 1, hriste));
                         break;
                 }
             return l;
         }
 
+        // na jedno pole je možné se dostat z více polí
         public static void Deduplikuj(List<Uzel> l)
         {
             for (int i = 0; i < l.Count-1; i++)
@@ -108,6 +110,7 @@ namespace StromoveHledani
         }
 
         // Ze současné generace smaž uzly z předchozí generace
+        // jinak se může algoritmus vracet na prošlá pole
         public static void VycistiMinulouGeneraci(List<Uzel> soucasna, List<Uzel> minula)
         {
             for (int i = 0; i < soucasna.Count; i++)
@@ -123,6 +126,7 @@ namespace StromoveHledani
                 Console.WriteLine($"{i++}. ({u.x}, {u.y})");
         }
 
+        // prochází od konce k začátku a ukládá cestu
         public static List<Uzel> ZpetnyChodHledani(List<List<Uzel>> l, Uzel konec)
         {
             List<Uzel> cesta = new List<Uzel>();
@@ -141,7 +145,6 @@ namespace StromoveHledani
                     }
                 }
             }
-
             return cesta;
         }
 
@@ -177,14 +180,12 @@ namespace StromoveHledani
                 {
                     Console.WriteLine($"Dosaženo v {genIdx} krocích");
                     List<Uzel> reversedSteps = ZpetnyChodHledani(generace, konecnyUzel);
-                    reversedSteps.Reverse();
+                    reversedSteps.Reverse(); // cesta se hledá od konce k začátku
                     VypisListUzlu(reversedSteps);
                     break;
                 }  
             }
             Console.ReadLine();
         }
-
-
     }
 }
