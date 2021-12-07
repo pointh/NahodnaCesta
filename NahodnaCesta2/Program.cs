@@ -15,6 +15,9 @@ namespace NahodnaCesta2
 
     class Robot
     {
+        int StartX, StartY;
+        int originPassCount;
+
         int PosX, PosY, EndX, EndY;
         readonly int[,] field;
         readonly Random rnd;
@@ -22,16 +25,19 @@ namespace NahodnaCesta2
  
         public Robot(int[,] field, int x, int y, int endX, int endY)
         {
+            StartX = x;
+            StartY = y;
+            originPassCount = 0;
             this.field = field;
 
             if (IsIllegalPosition(x, y))
             {
-                throw new ArgumentException($"Startovací souřadnice: {x}, {y}");
+                throw new ArgumentException($"Chybná startovací souřadnice: {x}, {y}");
             }
 
             if (IsIllegalPosition(endX, endY))
             {
-                throw new ArgumentException($"Konečná souřadnice: {endX}, {endY}");
+                throw new ArgumentException($"Chybná konečná souřadnice: {endX}, {endY}");
             }
 
             PosX = x; PosY = y;
@@ -66,6 +72,7 @@ namespace NahodnaCesta2
             return false;
         }
 
+        // tady by se dala upravit preference pro určitý směr
         static List<int[]> possibleDirections = new List<int[]>()
         {
                 new int[] { -1, 0 },
@@ -75,13 +82,21 @@ namespace NahodnaCesta2
         };
 
         void RandomStep(ref int x, ref int y)
-        {
+        { 
             do
-            {               
-                int[] distances = possibleDirections[rnd.Next(0, 4)];
-                
+            {   
+                // všechny směry se stejnou pravděpodobností
+                int[] distances = possibleDirections[rnd.Next(0, 4)]; 
                 x += distances[0];
                 y += distances[1];
+
+                if (x == StartX && y == StartY)
+                {
+                    originPassCount++;
+                    if (originPassCount > 199)
+                        throw new ApplicationException(
+                            $"Úloha nemá řešení, robot prošel {originPassCount}x počátkem.");
+                }
                 
                 if (IsIllegalPosition(x, y))
                 {
@@ -101,20 +116,47 @@ namespace NahodnaCesta2
 
             if (FromX == EndX && FromY == EndY)
             {
-                Console.WriteLine($"Jsem u cíle za {path.Count} kroků.");
+                Console.WriteLine($"Hotovo.");
                 return;
             }
 
             RandomStep(ref PosX, ref PosY);
-
             Go(PosX, PosY);
+        }
+
+        private void Squash(List<Coord> lst)
+        {
+            int squashIdx;
+
+            int i = lst.Count - 2;
+            // zruš v seznamu cyklické kroky
+            while (i > 0)
+            {
+                squashIdx = lst.FindIndex(r => r.x == lst[i].x && r.y == lst[i].y);
+                if (squashIdx > 0 && squashIdx < i)
+                {
+                    lst.RemoveRange(squashIdx, i - squashIdx);
+                    i = squashIdx;
+                }
+                i--;
+            }
         }
 
         public void Walk()
         {
             Go(PosX, PosY);
-            Console.WriteLine(string.Join("\n", path));
-            Console.WriteLine(path.Count);
+            
+            Console.WriteLine($"Původní velikost: {path.Count}");
+            Console.WriteLine($"Robot prošel počátkem {originPassCount}x.");
+
+            Squash(path);
+
+            for (int i = 0; i < path.Count; i++)
+            {
+                Console.WriteLine($"{i}. {path[i]}");
+            }
+
+            Console.WriteLine($"Po redukci: {path.Count}");
         }
     }
 
@@ -122,7 +164,7 @@ namespace NahodnaCesta2
     {
         public static int[,] field = {
           //  0   1   2   3   4  5  6   7  8   9   0   1
-            { 0,  0,  0,  0,  0, 0, 0,  0, 0,  0,  0,  0 }, // 0
+            { 0,  0,  0,  0,  0, 0, 0, -1, 0,  0,  0,  0 }, // 0
             { 0,  0,  0,  0, -1, 0, 0, -1, 0,  0,  0,  0 }, // 1
             { 0,  0,  0,  0, -1, 0, 0, -1, 0,  0,  0,  0 }, // 2 
             { 0,  0,  0,  0, -1, 0, 0, -1, 0,  0,  0,  0 }, // 3
@@ -133,7 +175,7 @@ namespace NahodnaCesta2
             { 0,  0,  0,  0,  0, 0, 0, -1, 0,  0,  0,  0 }, // 8
             { 0,  0,  0,  0,  0, 0, 0, -1, 0,  0,  0,  0 }, // 9
             {-1, -1,  0,  0,  0, 0, 0, -1, 0,  0,  0,  0 }, // 0
-            { 0,  0,  0,  0,  0, 0, 0, -1, 0,  0,  0,  0 }, // 1
+            { 0,  0,  0,  0,  0, 0, 0,  0, 0,  0,  0,  0 }, // 1
         };
         public static void Main()
         {
