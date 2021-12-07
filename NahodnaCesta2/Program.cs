@@ -1,96 +1,131 @@
 ﻿using System;
 using System.Collections.Generic;
 
+
 namespace NahodnaCesta2
 {
+    struct Coord
+    {
+        public int x, y;
+        public override string ToString()
+        {
+            return $"{x}, {y}";
+        }
+    }
+
     class Robot
     {
-        public int PosX;
-        public int PosY;
-        public int EndX;
-        public int EndY;
-
-        int[,] field;
-
+        int PosX, PosY, EndX, EndY;
+        readonly int[,] field;
         readonly Random rnd;
+        readonly List<Coord> path;
+ 
+        public Robot(int[,] field, int x, int y, int endX, int endY)
+        {
+            this.field = field;
 
-        readonly List<int> path;
+            if (IsIllegalPosition(x, y))
+            {
+                throw new ArgumentException($"Startovací souřadnice: {x}, {y}");
+            }
 
-        public Robot(int[,] field, int x, int y, int endX, int endY) 
-        { 
+            if (IsIllegalPosition(endX, endY))
+            {
+                throw new ArgumentException($"Konečná souřadnice: {endX}, {endY}");
+            }
+
             PosX = x; PosY = y;
             EndX = endX; EndY = endY;
-            this.field = field;
             rnd = new Random();
-            path = new List<int>();
+            path = new List<Coord>();
         }
 
         bool InInterval(int x, int min, int max) => x >= min && x <= max;
 
+        bool PositionOutOfField(int x, int y)
+        {
+            return InInterval(x, 0, field.GetLength(0) - 1) == false ||
+                   InInterval(y, 0, field.GetLength(1) - 1) == false;
+        }
+
+        bool PositionInBarrier(int x, int y)
+        {
+            if (PositionOutOfField(x, y))
+                return true;
+
+            return field[x, y] == -1;
+        }
+
+        public bool IsIllegalPosition(int x, int y)
+        {
+            if (PositionOutOfField(x, y))
+                return true;
+            if (PositionInBarrier(x, y))
+                return true;
+
+            return false;
+        }
+
+        static List<int[]> possibleDirections = new List<int[]>()
+        {
+                new int[] { -1, 0 },
+                new int[] { 1, 0 },
+                new int[] { 0, -1 },
+                new int[] { 0, 1 }
+        };
+
         void RandomStep(ref int x, ref int y)
         {
-            int[] stepVariants = { -1, 1, 0 };
-            int distanceX, distanceY;
-
-            distanceX = stepVariants[rnd.Next(0, 3)];  // -1, 0, 1
-            distanceY = 0;
-
-            if (distanceX == 0)
-            {
-                distanceY = stepVariants[rnd.Next(0, 2)]; // -1, 1
-                y += distanceY;
-            }
-            else
-            {
-                x += distanceX;
-            }
+            do
+            {               
+                int[] distances = possibleDirections[rnd.Next(0, 4)];
+                
+                x += distances[0];
+                y += distances[1];
+                
+                if (IsIllegalPosition(x, y))
+                {
+                    x -= distances[0];
+                    y -= distances[1];
+                }
+                else
+                {
+                    break;
+                }
+            } while (true);
         }
 
         public void Go(int FromX, int FromY)
         {
+            path.Add(new Coord { x = PosX, y = PosY });
+
             if (FromX == EndX && FromY == EndY)
             {
-                Console.WriteLine($"Jsem u cíle za {path.Count/2} kroků.");
+                Console.WriteLine($"Jsem u cíle za {path.Count} kroků.");
                 return;
             }
 
-            do
-            {
-                RandomStep(ref PosX, ref PosY);
-
-                if (InInterval(PosX, 0, field.GetLength(0) - 1) == false || // mimo pole, vrať se
-                    InInterval(PosY, 0, field.GetLength(1) - 1) == false)
-                {
-                    Console.WriteLine($"Aut {PosX}, {PosY}");
-                    PosX = FromX;
-                    PosY = FromY;
-                    continue;
-                }
-
-                if (field[PosX, PosY] == -1)                                // v bariéře, vrať se
-                {
-                    Console.WriteLine($"Crash {PosX}, {PosY}");
-                    PosX = FromX;
-                    PosY = FromY;
-                    continue;
-                }
-            } while (field[PosX, PosY] == -1);
-
-            Console.WriteLine($"{PosX}, {PosY}");
-            path.Add(PosX); path.Add(PosY);
+            RandomStep(ref PosX, ref PosY);
 
             Go(PosX, PosY);
         }
+
+        public void Walk()
+        {
+            Go(PosX, PosY);
+            Console.WriteLine(string.Join("\n", path));
+            Console.WriteLine(path.Count);
+        }
     }
 
-    class Field
+    class Program
     {
-        public int[,] field = {
+        public static int[,] field = {
           //  0   1   2   3   4  5  6   7  8   9   0   1
             { 0,  0,  0,  0,  0, 0, 0,  0, 0,  0,  0,  0 }, // 0
-            { 0,  0,  0,  0, -1, 0, 0,  0, 0,  0,  0,  0 }, // 1
-            { 0,  0,  0,  0, -1, 0, 0,  0, 0,  0,  0,  0 }, // 2 
-            { 0,  0,  0,  0, -1, 0, 0,  0, 0,  0,  0,  0 }, // 3
+            { 0,  0,  0,  0, -1, 0, 0, -1, 0,  0,  0,  0 }, // 1
+            { 0,  0,  0,  0, -1, 0, 0, -1, 0,  0,  0,  0 }, // 2 
+            { 0,  0,  0,  0, -1, 0, 0, -1, 0,  0,  0,  0 }, // 3
             { 0,  0,  0,  0, -1, 0, 0, -1, 0,  0,  0,  0 }, // 4
             { 0,  0,  0,  0, -1, 0, 0, -1, 0,  0, -1,  0 }, // 5
             { 0,  0,  0,  0, -1, 0, 0, -1, 0, -1, -1, -1 }, // 6
@@ -100,21 +135,11 @@ namespace NahodnaCesta2
             {-1, -1,  0,  0,  0, 0, 0, -1, 0,  0,  0,  0 }, // 0
             { 0,  0,  0,  0,  0, 0, 0, -1, 0,  0,  0,  0 }, // 1
         };
-
-        public void RobotWalk(Robot r)
-        {
-            r.Go(r.PosX, r.PosY);
-        }    
-    }
-   
-    class Program
-    {
         public static void Main()
         {
-            Field f = new Field();
-            Robot r = new Robot(f.field, 2, 11, 6, 2);
+            Robot r = new Robot(field, 2, 11, 6, 2);
 
-            f.RobotWalk(r);
+            r.Walk();
         }
     }
 }
